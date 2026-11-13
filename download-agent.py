@@ -75,6 +75,22 @@ def parse_cmdline(pid: int) -> list[str]:
         return []
 
 
+def public_url(url: str | None) -> str:
+    if not url:
+        return '(unknown)'
+    parsed = urlparse(url)
+    if parsed.scheme not in ('http', 'https', 'ftp') or not parsed.hostname:
+        return '(redacted)'
+    host = parsed.hostname
+    if ':' in host:
+        host = f'[{host}]'
+    try:
+        port = f':{parsed.port}' if parsed.port else ''
+    except ValueError:
+        return '(redacted)'
+    return f'{parsed.scheme}://{host}{port}{parsed.path}'
+
+
 def extract_url(args: list[str]) -> str | None:
     """Pull the download URL from the argument list (usually last positional)."""
     for arg in reversed(args):
@@ -279,7 +295,7 @@ def get_process_info(pid: int) -> dict | None:
     return {
         'pid': pid,
         'tool': tool,
-        'url': url or '(unknown)',
+        'url': public_url(url),
         'output_file': output_file or '(unknown)',
         'file_size': file_size,
         'total_size': total_size,
@@ -356,7 +372,6 @@ class AgentHandler(BaseHTTPRequestHandler):
         body = json.dumps(data, ensure_ascii=False).encode('utf-8')
         self.send_response(code)
         self.send_header('Content-Type', 'application/json; charset=utf-8')
-        self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Content-Length', str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -418,7 +433,6 @@ class AgentHandler(BaseHTTPRequestHandler):
 
     def do_OPTIONS(self):
         self.send_response(204)
-        self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.end_headers()

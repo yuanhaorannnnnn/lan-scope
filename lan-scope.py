@@ -288,10 +288,24 @@ def scan_all_agents(hosts: list[dict], timeout: float = AGENT_TIMEOUT) -> dict:
     return results
 
 
+def valid_ssh_target(host, username):
+    return (isinstance(host, str) and isinstance(username, str)
+            and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9.-]{0,252}", host) is not None
+            and re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}", username) is not None)
+
+
+def ssh_args(host, username):
+    return ["-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null",
+            "-o", "HostKeyAlgorithms=+ssh-rsa", "-o", "PubkeyAcceptedKeyTypes=+ssh-rsa",
+            "-o", "ConnectTimeout=5", f"{username}@{host}"]
+
+
 def deploy_agent_to(host: str, username: str, password: str) -> tuple[bool, str]:
     """SCP download-agent.py + SSH launch it on the target machine.
     Returns (success, message).
     """
+    if not valid_ssh_target(host, username):
+        return False, "Invalid host or username"
     agent_path = os.path.join(SCRIPT_DIR, "download-agent.py")
     if not os.path.exists(agent_path):
         return False, f"Agent script not found: {agent_path}"
@@ -344,6 +358,8 @@ def deploy_agent_to(host: str, username: str, password: str) -> tuple[bool, str]
 def _deploy_via_pexpect(host: str, username: str, password: str) -> tuple[bool, str]:
     """Fallback deployment using pexpect (sshpass not available)."""
     import base64
+    if not valid_ssh_target(host, username):
+        return False, "Invalid host or username"
     agent_path = os.path.join(SCRIPT_DIR, "download-agent.py")
     if not os.path.exists(agent_path):
         return False, "Agent script not found"
@@ -354,13 +370,8 @@ def _deploy_via_pexpect(host: str, username: str, password: str) -> tuple[bool, 
     except OSError as e:
         return False, f"Cannot read agent script: {e}"
 
-    ssh_cmd = (
-        f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "
-        f"-o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa "
-        f"-o ConnectTimeout=5 {username}@{host}"
-    )
     try:
-        child = pexpect.spawn(ssh_cmd, encoding="utf-8", timeout=10)
+        child = pexpect.spawn("ssh", ssh_args(host, username), encoding="utf-8", timeout=10)
         idx = child.expect(["password:", "Password:", pexpect.EOF, pexpect.TIMEOUT], timeout=8)
         if idx >= 2:
             child.close()
@@ -400,6 +411,8 @@ def ssh_oneshot_downloads(host: str, username: str, password: str, timeout: floa
     No deployment required — the script runs inline and exits immediately.
     Returns None on failure.
     """
+    if not valid_ssh_target(host, username):
+        return None
     import base64
     agent_path = os.path.join(SCRIPT_DIR, "download-agent.py")
     try:
@@ -408,14 +421,9 @@ def ssh_oneshot_downloads(host: str, username: str, password: str, timeout: floa
     except OSError:
         return None
 
-    ssh_cmd = (
-        f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "
-        f"-o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa "
-        f"-o ConnectTimeout=5 {username}@{host} "
-        f"\"echo '{b64}' | base64 -d | python3 /dev/stdin --oneshot\""
-    )
     try:
-        child = pexpect.spawn(ssh_cmd, encoding="utf-8", timeout=timeout)
+        command = f"echo '{b64}' | base64 -d | python3 /dev/stdin --oneshot"
+        child = pexpect.spawn("ssh", ssh_args(host, username) + [command], encoding="utf-8", timeout=timeout)
         idx = child.expect(["password:", "Password:", pexpect.EOF, pexpect.TIMEOUT], timeout=6)
         if idx < 2:
             child.sendline(password)
@@ -456,6 +464,18 @@ class ReusableHTTPServer(HTTPServer):
 
 
 class Handler(BaseHTTPRequestHandler):
+    def _local_request(self):
+        port = self.server.server_port
+        hosts = {f"localhost:{port}", f"127.0.0.1:{port}"}
+        host = self.headers.get("Host", "").lower()
+        origin = self.headers.get("Origin")
+        if (host not in hosts or
+                (origin and origin.lower() not in {f"http://{h}" for h in hosts}) or
+                self.headers.get("Sec-Fetch-Site", "").lower() == "cross-site"):
+            self.send_error(403, "Local requests only")
+            return False
+        return True
+
     def log_message(self, fmt, *args):
         pass  # silence access logs
 
@@ -463,7 +483,6 @@ class Handler(BaseHTTPRequestHandler):
         body = json.dumps(data, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -473,6 +492,7 @@ class Handler(BaseHTTPRequestHandler):
         return json.loads(self.rfile.read(length)) if length else {}
 
     def do_GET(self):
+        if not self._local_request(): return
         parsed = urlparse(self.path)
 
         if parsed.path == "/health":
@@ -740,7 +760,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
             with lock:
                 try:
-                    output = b""
+                    output = ""
                     while True:
                         try:
                             chunk = child.read_nonblocking(size=4096, timeout=0.05)
@@ -748,9 +768,9 @@ class Handler(BaseHTTPRequestHandler):
                         except pexpect.TIMEOUT:
                             break
                         except pexpect.EOF:
-                            output += child.before or b""
+                            output += child.before or ""
                             break
-                    text = ANSI_RE.sub("", output.decode("utf-8", errors="replace"))
+                    text = ANSI_RE.sub("", output)
                     self._send_json({"output": text, "alive": child.isalive()})
                 except Exception as e:
                     self._send_json({"output": "", "alive": False, "error": str(e)})
@@ -811,6 +831,7 @@ class Handler(BaseHTTPRequestHandler):
         self._send_json({"error": "not found"}, 404)
 
     def do_POST(self):
+        if not self._local_request(): return
         parsed = urlparse(self.path)
 
         if parsed.path == "/downloads/agent/deploy":
@@ -818,8 +839,8 @@ class Handler(BaseHTTPRequestHandler):
             host = data.get("host", "")
             username = data.get("username", "")
             password = data.get("password", "")
-            if not host or not username:
-                self._send_json({"error": "host and username required"}, 400)
+            if not valid_ssh_target(host, username):
+                self._send_json({"error": "invalid host or username"}, 400)
                 return
             ok, msg = deploy_agent_to(host, username, password)
             self._send_json({"ok": ok, "message": msg})
@@ -830,14 +851,11 @@ class Handler(BaseHTTPRequestHandler):
             host = data.get("host", "")
             username = data.get("username", "")
             password = data.get("password", "")
-            if not host or not username:
-                self._send_json({"error": "host and username required"}, 400)
+            if not valid_ssh_target(host, username):
+                self._send_json({"error": "invalid host or username"}, 400)
                 return
             try:
-                child = pexpect.spawn(
-                    f"ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa {username}@{host}",
-                    encoding="utf-8", timeout=10
-                )
+                child = pexpect.spawn("ssh", ssh_args(host, username), encoding="utf-8", timeout=10)
                 idx = child.expect(["password:", "Password:", pexpect.EOF, pexpect.TIMEOUT], timeout=8)
                 if idx < 2:
                     child.sendline(password)
@@ -909,15 +927,15 @@ class Handler(BaseHTTPRequestHandler):
         self._send_json({"error": "not found"}, 404)
 
     def do_OPTIONS(self):
+        if not self._local_request(): return
         self.send_response(204)
-        self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
 
 
 def main():
-    server = ReusableHTTPServer(("0.0.0.0", PORT), Handler)
+    server = ReusableHTTPServer(("127.0.0.1", PORT), Handler)
     print(f"LAN Scope backend → http://localhost:{PORT}")
     print(f"  /scan?mode=full   — scan {SUBNET}.{START}-{END}")
     print(f"  /scan?mode=quick  — scan common ranges")
