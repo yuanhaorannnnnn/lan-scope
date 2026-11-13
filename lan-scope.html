@@ -1,0 +1,1660 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>LAN Scope — 172.16.19.0/24</title>
+<style>
+  :root {
+    --ivory: #FAF9F5;
+    --slate: #141413;
+    --clay: #D97757;
+    --oat: #E3DACC;
+    --olive: #788C5D;
+    --rust: #B04A3F;
+    --gray-100: #F0EEE6;
+    --gray-300: #D1CFC5;
+    --gray-500: #87867F;
+    --gray-700: #3D3D3A;
+    --white: #FFFFFF;
+
+    --serif: ui-serif, Georgia, serif;
+    --sans: system-ui, -apple-system, sans-serif;
+    --mono: ui-monospace, 'SF Mono', Menlo, monospace;
+
+    --radius-panel: 12px;
+    --radius-row: 8px;
+    --border: 1.5px solid var(--gray-300);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 56px 24px 120px;
+    background: var(--ivory);
+    color: var(--slate);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  /* ---------- Header ---------- */
+  header {
+    margin-bottom: 40px;
+  }
+  .header-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 38px;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  .auto-pill {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--gray-500);
+    background: var(--gray-100);
+    border: var(--border);
+    border-radius: 999px;
+    padding: 5px 11px;
+    white-space: nowrap;
+  }
+  .auto-pill.online { color: var(--olive); border-color: var(--olive); background: transparent; }
+  .auto-pill.scanning { color: var(--clay); border-color: var(--clay); background: transparent; animation: pulse 1.4s ease-in-out infinite; }
+  .auto-pill.off { color: var(--rust); border-color: var(--rust); background: transparent; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+  .date-range {
+    color: var(--gray-500);
+    font-size: 14px;
+  }
+  .date-range .repo {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--gray-700);
+  }
+
+  /* ---------- Sections ---------- */
+  section {
+    margin-bottom: 52px;
+  }
+  h2 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 24px;
+    letter-spacing: -0.01em;
+    margin: 0 0 6px;
+  }
+  hr.rule {
+    border: none;
+    border-top: 1px solid var(--gray-300);
+    margin: 0 0 22px;
+  }
+
+  /* ---------- Backend status bar ---------- */
+  .backend-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--gray-500);
+    margin-bottom: 0;
+    font-family: var(--mono);
+  }
+  .backend-bar .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--gray-300);
+    flex-shrink: 0;
+  }
+  .backend-bar .dot.live { background: var(--olive); }
+  .backend-bar .dot.dead { background: var(--rust); }
+
+  /* ---------- Summary band ---------- */
+  .summary-band {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
+  }
+  @media (max-width: 800px) {
+    .summary-band { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 560px) {
+    .summary-band { grid-template-columns: repeat(2, 1fr); }
+  }
+  .stat-card {
+    background: var(--white);
+    border: var(--border);
+    border-radius: var(--radius-panel);
+    padding: 20px 22px 18px;
+  }
+  .stat-card.warn {
+    border-left: 4px solid var(--clay);
+    padding-left: 19px;
+  }
+  .stat-num {
+    font-family: var(--serif);
+    font-size: 40px;
+    font-weight: 500;
+    line-height: 1;
+    color: var(--slate);
+    margin-bottom: 8px;
+  }
+  .stat-label {
+    font-family: var(--sans);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--gray-500);
+  }
+  .stat-delta {
+    font-family: var(--mono);
+    font-size: 11px;
+    margin-top: 6px;
+  }
+  .stat-delta.up { color: var(--olive); }
+  .stat-delta.flat { color: var(--gray-500); }
+
+  /* ---------- Scan controls ---------- */
+  .scan-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .btn-scan {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 20px;
+    border-radius: 6px;
+    border: 1.5px solid var(--slate);
+    cursor: pointer;
+    background: var(--slate);
+    color: var(--ivory);
+    transition: background 0.15s, opacity 0.15s;
+  }
+  .btn-scan:hover { opacity: 0.85; }
+  .btn-scan:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-scan.secondary {
+    background: transparent;
+    color: var(--slate);
+    border-color: var(--gray-300);
+  }
+  .btn-scan.secondary:hover { background: var(--gray-100); }
+
+  /* ---------- Progress ---------- */
+  .progress-wrap {
+    background: var(--gray-100);
+    border-radius: 4px;
+    height: 6px;
+    overflow: hidden;
+    margin-top: 14px;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--clay);
+    border-radius: 4px;
+    transition: width 0.3s;
+    width: 0%;
+  }
+
+  /* ---------- Filter + table ---------- */
+  .filter-tabs {
+    display: inline-flex;
+    gap: 4px;
+    margin-bottom: 14px;
+    background: var(--gray-100);
+    border: var(--border);
+    border-radius: var(--radius-row);
+    padding: 4px;
+  }
+  .filter-tab {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--gray-700);
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  .filter-tab.active {
+    background: var(--ivory);
+    box-shadow: 0 0 0 1px var(--gray-300);
+  }
+  .filter-tab:hover:not(.active) { background: var(--oat); }
+
+  .search-inline {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--gray-700);
+    border: var(--border);
+    border-radius: var(--radius-row);
+    padding: 6px 10px;
+    outline: none;
+    background: var(--white);
+    width: 130px;
+    margin-left: 10px;
+  }
+  .search-inline:focus { border-color: var(--clay); }
+  .search-inline::placeholder { color: var(--gray-500); }
+
+  table.hosts {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: var(--white);
+    border: var(--border);
+    border-radius: var(--radius-panel);
+    overflow: hidden;
+  }
+  table.hosts thead th {
+    text-align: left;
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--gray-500);
+    background: var(--gray-100);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--gray-300);
+  }
+  table.hosts tbody td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--gray-100);
+    font-size: 14px;
+    vertical-align: middle;
+  }
+  table.hosts tbody tr:last-child td {
+    border-bottom: none;
+  }
+  table.hosts tbody tr:hover {
+    background: var(--ivory);
+  }
+  .host-ip {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--slate);
+    font-weight: 500;
+  }
+  .host-name {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--gray-500);
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+  }
+  .risk {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: var(--gray-500);
+  }
+  .risk-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .risk-dot.online { background: var(--olive); }
+  .risk-dot.offline { background: var(--rust); }
+  .risk-dot.scanning { background: var(--clay); animation: pulse 1s ease-in-out infinite; }
+  .risk-dot.idle { background: var(--gray-300); }
+  .latency {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--gray-700);
+  }
+  .latency.fast { color: var(--olive); }
+  .latency.slow { color: var(--clay); }
+  .service-badge {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 2px 7px;
+    border-radius: 4px;
+    margin-right: 4px;
+  }
+  .service-badge.http { background: var(--gray-100); color: var(--olive); }
+  .service-badge.ssh  { background: var(--gray-100); color: var(--slate); }
+
+  /* ---------- Empty state ---------- */
+  .empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--gray-500);
+    font-size: 14px;
+  }
+  .empty-state strong {
+    color: var(--gray-700);
+    font-weight: 600;
+  }
+
+  /* ---------- SSH Terminal ---------- */
+  .ssh-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(20,20,19,0.35);
+    z-index: 99;
+  }
+  .ssh-overlay.show { display: block; }
+  .ssh-modal {
+    display: none;
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 640px;
+    max-width: 92vw;
+    max-height: 80vh;
+    background: var(--white);
+    border: var(--border);
+    border-radius: var(--radius-panel);
+    z-index: 100;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.12);
+    overflow: hidden;
+  }
+  .ssh-modal.show { display: flex; flex-direction: column; }
+  .ssh-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    background: var(--gray-100);
+    border-bottom: 1px solid var(--gray-300);
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray-700);
+  }
+  .ssh-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: var(--gray-500);
+    padding: 0 4px;
+    line-height: 1;
+  }
+  .ssh-close:hover { color: var(--slate); }
+  .ssh-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 200px;
+  }
+  .ssh-field {
+    margin-bottom: 12px;
+  }
+  .ssh-field label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--gray-500);
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+  .ssh-field input {
+    width: 100%;
+    font-family: var(--mono);
+    font-size: 14px;
+    padding: 8px 10px;
+    border: var(--border);
+    border-radius: var(--radius-row);
+    background: var(--white);
+    color: var(--slate);
+    outline: none;
+  }
+  .ssh-field input:focus { border-color: var(--clay); }
+  .ssh-error {
+    display: inline-block;
+    margin-left: 12px;
+    font-size: 13px;
+    color: var(--rust);
+    font-family: var(--mono);
+  }
+  #ssh-output {
+    background: var(--slate);
+    color: #e1e3e8;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 14px 16px;
+    border-radius: var(--radius-row);
+    min-height: 200px;
+    max-height: 340px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    margin: 0 0 10px;
+  }
+  .ssh-input-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--gray-100);
+    border: var(--border);
+    border-radius: var(--radius-row);
+    padding: 6px 10px;
+  }
+  #ssh-prompt {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--olive);
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  #ssh-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--slate);
+    outline: none;
+    padding: 2px 0;
+  }
+
+  /* ---------- Footer ---------- */
+  footer {
+    margin-top: 64px;
+    padding-top: 20px;
+    border-top: 1px solid var(--gray-300);
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--gray-500);
+  }
+
+  /* ---------- Downloads ---------- */
+  .dl-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .dl-agent-dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    margin-right: 6px;
+    flex-shrink: 0;
+  }
+  .dl-agent-dot.live  { background: var(--olive); }
+  .dl-agent-dot.dead  { background: var(--rust); }
+  .dl-agent-dot.none  { background: var(--gray-300); }
+
+  .dl-tool-badge {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: var(--gray-100);
+    color: var(--gray-700);
+  }
+  .dl-progress-cell {
+    min-width: 120px;
+  }
+  .dl-progress-bar {
+    width: 100%;
+    height: 5px;
+    background: var(--gray-100);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 3px;
+  }
+  .dl-progress-fill {
+    height: 100%;
+    background: var(--olive);
+    border-radius: 3px;
+    transition: width 0.5s;
+  }
+  .dl-progress-fill.unknown {
+    background: var(--clay);
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  .dl-progress-pct {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--gray-500);
+  }
+  .dl-speed {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--gray-700);
+    white-space: nowrap;
+  }
+  .dl-speed.fast { color: var(--olive); }
+  .dl-url-cell {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--gray-500);
+  }
+  .dl-file-cell {
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--slate);
+  }
+  .dl-machine-cell {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--slate);
+  }
+  .dl-machine-name {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--gray-500);
+    display: block;
+  }
+  .btn-deploy {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 3px 9px;
+    border-radius: 4px;
+    border: 1px solid var(--olive);
+    background: transparent;
+    color: var(--olive);
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  .btn-deploy:hover { background: var(--gray-100); }
+  .btn-deploy:disabled { opacity: 0.4; cursor: not-allowed; }
+  .dl-deploy-row td {
+    padding: 16px !important;
+    text-align: center;
+  }
+  .dl-deploy-hint {
+    font-size: 13px;
+    color: var(--gray-500);
+  }
+  .dl-deploy-hint strong { color: var(--gray-700); }
+  .dl-empty {
+    text-align: center;
+    padding: 28px;
+    color: var(--gray-500);
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="header-top">
+      <h1>LAN Scope</h1>
+      <span class="auto-pill" id="scan-pill">idle</span>
+    </div>
+    <div class="date-range">
+      <span class="repo">172.16.19.0/24</span>
+      &nbsp;&middot;&nbsp; 本机 <span class="repo">172.16.19.158</span>
+      &nbsp;&middot;&nbsp; <span id="clock">--</span>
+    </div>
+    <div class="backend-bar" style="margin-top:6px;">
+      <span class="dot" id="backend-dot"></span>
+      <span id="backend-label">检测后端…</span>
+    </div>
+  </header>
+
+  <!-- Summary -->
+  <section>
+    <div class="summary-band">
+      <div class="stat-card">
+        <div class="stat-num" id="stat-total">254</div>
+        <div class="stat-label">总 IP 数</div>
+        <div class="stat-delta flat">172.16.19.1 &ndash; 254</div>
+      </div>
+      <div class="stat-card warn" id="card-progress">
+        <div class="stat-num" id="stat-scanned">0</div>
+        <div class="stat-label">已扫描</div>
+        <div class="stat-delta flat" id="stat-delta-scanned">就绪</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-online">—</div>
+        <div class="stat-label">在线</div>
+        <div class="stat-delta up" id="stat-delta-online"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-http">—</div>
+        <div class="stat-label">HTTP :80</div>
+        <div class="stat-delta up" id="stat-delta-http"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-ssh">—</div>
+        <div class="stat-label">SSH :22</div>
+        <div class="stat-delta up" id="stat-delta-ssh"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Scan -->
+  <section>
+    <h2>Scan</h2>
+    <hr class="rule">
+    <div class="scan-bar">
+      <button class="btn-scan" id="btn-full" onclick="startScan('full')">Full Scan</button>
+      <button class="btn-scan secondary" id="btn-ssh" onclick="startScan('ssh')">SSH Scan</button>
+      <button class="btn-scan secondary" id="btn-stop" onclick="stopScan()" disabled>Stop</button>
+      <span style="font-family:var(--mono);font-size:12px;color:var(--gray-500);margin-left:8px;" id="scan-hint">Ctrl+R full · Ctrl+S SSH</span>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-fill" id="progress-bar"></div>
+    </div>
+  </section>
+
+  <!-- Hosts -->
+  <section>
+    <h2>Hosts</h2>
+    <hr class="rule">
+    <div>
+      <div class="filter-tabs">
+        <button class="filter-tab active" data-filter="all" onclick="setFilter('all',this)">All</button>
+        <button class="filter-tab" data-filter="online" onclick="setFilter('online',this)">Online</button>
+        <button class="filter-tab" data-filter="http" onclick="setFilter('http',this)">HTTP</button>
+        <button class="filter-tab" data-filter="ssh" onclick="setFilter('ssh',this)">SSH</button>
+      </div>
+      <input class="search-inline" type="text" id="search" placeholder="Search IP…" oninput="renderTable()">
+      <span style="font-size:12px;color:var(--gray-500);margin-left:8px;" id="row-count"></span>
+    </div>
+    <table class="hosts">
+      <thead>
+        <tr>
+          <th style="width:145px;">IP</th>
+          <th style="width:140px;">MAC</th>
+          <th>Hostname</th>
+          <th style="width:85px;">HTTP :80</th>
+          <th style="width:75px;">SSH :22</th>
+          <th style="width:80px;">Latency</th>
+        </tr>
+      </thead>
+      <tbody id="host-tbody">
+        <tr><td colspan="6"><div class="empty-state">点击 <strong>Full Scan</strong> 或 <strong>Quick Scan</strong> 开始扫描局域网</div></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Downloads -->
+  <section>
+    <h2>Downloads</h2>
+    <hr class="rule">
+    <div class="summary-band" style="grid-template-columns: repeat(4, 1fr);">
+      <div class="stat-card">
+        <div class="stat-num" id="stat-dl-active">—</div>
+        <div class="stat-label">活跃下载</div>
+        <div class="stat-delta flat" id="stat-dl-delta-active"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-dl-speed">—</div>
+        <div class="stat-label">总速率</div>
+        <div class="stat-delta up" id="stat-dl-delta-speed"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-dl-agents">—</div>
+        <div class="stat-label">Agent 在线</div>
+        <div class="stat-delta flat" id="stat-dl-delta-agents"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-dl-hosts">—</div>
+        <div class="stat-label">在线主机</div>
+        <div class="stat-delta flat" id="stat-dl-delta-hosts"></div>
+      </div>
+    </div>
+    <div class="dl-bar" style="margin-top:18px;">
+      <button class="btn-scan secondary" id="btn-dl-refresh" onclick="refreshDownloads()">Refresh</button>
+      <span style="font-family:var(--mono);font-size:12px;color:var(--gray-500);" id="dl-refresh-hint">点击 Hosts 表中的机器连接，下载自动出现</span>
+      <label style="font-family:var(--mono);font-size:12px;color:var(--gray-500);margin-left:auto;display:flex;align-items:center;gap:5px;cursor:pointer;">
+        <input type="checkbox" id="dl-auto-refresh" onchange="toggleAutoRefresh()" checked> 自动刷新 (3s)
+      </label>
+    </div>
+    <table class="hosts" style="margin-top:8px;">
+      <thead>
+        <tr>
+          <th style="width:140px;">机器</th>
+          <th style="width:75px;">工具</th>
+          <th>文件</th>
+          <th>URL</th>
+          <th style="width:135px;">进度</th>
+          <th style="width:85px;">速率</th>
+          <th style="width:65px;">ETA</th>
+        </tr>
+      </thead>
+      <tbody id="dl-tbody">
+        <tr><td colspan="7"><div class="dl-empty">点击 <strong>Refresh</strong> 查看局域网下载状态（需先执行 Full Scan）</div></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- SSH Terminal modal -->
+  <div class="ssh-overlay" id="ssh-overlay" onclick="closeTerminal()"></div>
+  <div class="ssh-modal" id="ssh-modal">
+    <div class="ssh-header">
+      <span id="ssh-title">SSH Terminal</span>
+      <button class="ssh-close" onclick="closeTerminal()">&times;</button>
+    </div>
+    <div class="ssh-body" id="ssh-body">
+      <div id="ssh-login">
+        <div class="ssh-field">
+          <label>用户名</label>
+          <input type="text" id="ssh-user" placeholder="yhr" autocomplete="off">
+        </div>
+        <div class="ssh-field">
+          <label>密码</label>
+          <input type="password" id="ssh-pass" placeholder="输入密码" autocomplete="off">
+        </div>
+        <button class="btn-scan" id="ssh-connect-btn" onclick="sshConnect()">Connect</button>
+        <span class="ssh-error" id="ssh-error"></span>
+      </div>
+      <div id="ssh-terminal" style="display:none;">
+        <pre id="ssh-output"></pre>
+        <div class="ssh-input-line">
+          <span id="ssh-prompt">$</span>
+          <input type="text" id="ssh-input" placeholder="输入命令..." autocomplete="off" onkeydown="sshKeydown(event)">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <span id="footer-info">检测后端中…</span>
+  </footer>
+
+</div>
+
+<script>
+const START = 1, END = 254, TIMEOUT = 3000, CONCURRENCY = 20;
+const BACKEND_URL = window.location.origin || 'http://localhost:19876';
+const SUBNET_DISPLAY = '172.16.19';  // placeholder, updated from /config
+
+let hosts = {};       // { ipSuffix: { http, ssh, hostname, mac, latency_http, latency_ssh } }
+
+for (let i = START; i <= END; i++) {
+  hosts[i] = { http: null, ssh: null, hostname: null, mac: null, latency_http: null, latency_ssh: null };
+}
+let abortCtrl = null;
+let currentFilter = 'all';
+let backendOnline = false;
+let SUBNET = '172.16.19';  // will be updated from /config
+let LOCAL_IP = '172.16.19.158';
+
+// ---- Backend detection ----
+async function checkBackend() {
+  let t;
+  try {
+    const ctrl = new AbortController();
+    t = setTimeout(() => ctrl.abort(), 2000);
+    const r = await fetch(`${BACKEND_URL}/health`, { signal: ctrl.signal });
+    clearTimeout(t);
+    if (r.ok) {
+      backendOnline = true;
+      document.getElementById('backend-dot').className = 'dot live';
+      document.getElementById('backend-label').textContent = '后端已连接 (SSH + hostname 可用)';
+      document.getElementById('footer-info').textContent =
+        'Scan method: Python backend · HTTP :80 + SSH :22 + reverse DNS · Concurrency: 50';
+      // Fetch subnet config
+      try {
+        const cfg = await fetch(`${BACKEND_URL}/config`).then(r => r.json());
+        if (cfg.prefix) {
+          SUBNET = cfg.prefix;
+          LOCAL_IP = cfg.local_ip;
+          localUser = cfg.local_user || '';
+          document.querySelector('.date-range').innerHTML =
+            `<span class="repo">${cfg.subnet}</span> &nbsp;·&nbsp; 本机 <span class="repo">${cfg.local_ip}</span> &nbsp;·&nbsp; <span id="clock">--</span>`;
+          document.title = `LAN Scope — ${cfg.subnet}`;
+        }
+      } catch {}
+    }
+  } catch {
+    clearTimeout(t);
+    backendOnline = false;
+    document.getElementById('backend-dot').className = 'dot dead';
+    document.getElementById('backend-label').textContent = '后端未运行 — 仅 HTTP :80 (运行 python lan-scanner.py 获取完整功能)';
+    document.getElementById('footer-info').textContent =
+      'Scan method: browser fetch · HTTP :80 only · Timeout: 3s · Concurrency: 20';
+  }
+}
+
+// ---- Render ----
+function renderTable() {
+  const search = document.getElementById('search').value.trim();
+  const tbody = document.getElementById('host-tbody');
+  let rows = '';
+  let visible = 0;
+
+  for (let i = START; i <= END; i++) {
+    const h = hosts[i];
+    const scanned = h.http !== null || h.ssh !== null;
+    if (!scanned && currentFilter !== 'all') continue;
+    if (!scanned) continue;
+
+    const isOnline = h.http || h.ssh;
+    if (currentFilter === 'online' && !isOnline) continue;
+    if (currentFilter === 'http' && !h.http) continue;
+    if (currentFilter === 'ssh' && !h.ssh) continue;
+    if (search && !String(i).includes(search)) continue;
+
+    visible++;
+    const ip = `${SUBNET}.${i}`;
+
+    // HTTP cell
+    let httpCell = '<td style="color:var(--gray-500);">—</td>';
+    if (h.http === true) {
+      httpCell = `<td><span class="service-badge http">HTTP</span> <span class="latency fast">${h.latency_http}ms</span></td>`;
+    } else if (h.http === false) {
+      httpCell = '<td><span class="risk"><span class="risk-dot offline"></span>—</span></td>';
+    }
+
+    // SSH cell
+    let sshCell = '<td style="color:var(--gray-500);">—</td>';
+    if (h.ssh === true) {
+      sshCell = `<td><span class="service-badge ssh">SSH ▸</span> <span class="latency fast">${h.latency_ssh}ms</span></td>`;
+    } else if (h.ssh === false) {
+      sshCell = '<td><span class="risk"><span class="risk-dot offline"></span>—</span></td>';
+    }
+
+    // Hostname
+    let hostCell = '<td style="color:var(--gray-500);">—</td>';
+    if (h.hostname) {
+      hostCell = `<td><span class="host-name" title="${h.hostname}">${h.hostname}</span></td>`;
+    }
+
+    // MAC
+    let macCell = '<td style="color:var(--gray-500);font-family:var(--mono);font-size:12px;">—</td>';
+    if (h.mac) {
+      macCell = `<td><span style="font-family:var(--mono);font-size:12px;color:var(--gray-700);">${h.mac}</span></td>`;
+    }
+
+    // Latency summary (pick the faster of http/ssh)
+    let lat = h.latency_http ?? h.latency_ssh;
+    let latCell = '<td class="latency" style="color:var(--gray-500);">—</td>';
+    if (lat !== null) {
+      const cls = lat < 5 ? 'fast' : (lat > 50 ? 'slow' : '');
+      latCell = `<td class="latency ${cls}">${lat} ms</td>`;
+    }
+
+    // Row class — show connected dot + DL badge for machines with active downloads
+    const connected = !!dlConnectedIPs[ip];
+    const connDot = connected ? '<span class="dl-agent-dot live" style="margin-left:4px;" title="已连接"></span>' : '';
+    const dlCount = dlCountByIP[ip] || 0;
+    const dlBadge = dlCount ? ` <span class="dl-tool-badge" style="background:var(--olive);color:#fff;cursor:pointer;margin-left:4px;" onclick="event.stopPropagation();filterDownloadsByIP('${ip}')" title="${dlCount} 个下载">DL ${dlCount}</span>` : '';
+    const clickable = (h.ssh || dlCount) ? ` onclick="hostRowClick(${i})" style="cursor:pointer;"` : '';
+    const rowClass = isOnline ? '' : ' style="opacity:0.5;"';
+
+    rows += `<tr${rowClass}${clickable}>
+      <td><span class="host-ip">${ip}</span>${connDot}${dlBadge}</td>
+      ${macCell}
+      ${hostCell}
+      ${httpCell}
+      ${sshCell}
+      ${latCell}
+    </tr>`;
+  }
+
+  if (!rows) {
+    const msg = search ? '无匹配 IP' : '点击 <strong>Full Scan</strong> 或 <strong>Quick Scan</strong> 开始扫描局域网';
+    rows = `<tr><td colspan="6"><div class="empty-state">${msg}</div></td></tr>`;
+  }
+
+  tbody.innerHTML = rows;
+  document.getElementById('row-count').textContent = visible ? `${visible} 台显示` : '';
+  updateStats();
+}
+
+let dlCountByIP = {};   // {ip: count} populated by refreshDownloads
+
+function updateStats() {
+  let online = 0, httpCount = 0, sshCount = 0, scanned = 0;
+  for (let i = START; i <= END; i++) {
+    const h = hosts[i];
+    if (h.http !== null || h.ssh !== null) scanned++;
+    if (h.http) { online++; httpCount++; }
+    else if (h.ssh && !h.http) online++;
+    if (h.http) httpCount++;
+    if (h.ssh) sshCount++;
+  }
+  const total = END - START + 1;
+
+  document.getElementById('stat-online').textContent = scanned ? online : '—';
+  document.getElementById('stat-http').textContent = scanned ? httpCount : '—';
+  document.getElementById('stat-ssh').textContent = scanned ? sshCount : '—';
+  document.getElementById('stat-scanned').textContent = scanned;
+  document.getElementById('stat-delta-scanned').textContent = scanned ? `${Math.round(scanned/total*100)}%` : '就绪';
+  document.getElementById('stat-delta-online').textContent = scanned ? `${online} 台` : '';
+  document.getElementById('stat-delta-http').textContent = httpCount ? `${httpCount} 台` : '';
+  document.getElementById('stat-delta-ssh').textContent = sshCount ? `${sshCount} 台` : '';
+
+  document.getElementById('progress-bar').style.width = (scanned / total * 100) + '%';
+
+  // Pill
+  const pill = document.getElementById('scan-pill');
+  if (scanned > 0) {
+    pill.textContent = online + ' online';
+    pill.className = 'auto-pill online';
+  } else {
+    pill.textContent = 'idle';
+    pill.className = 'auto-pill';
+  }
+}
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTable();
+}
+
+// ---- Backend scan ----
+async function scanBackend(mode) {
+  const resp = await fetch(`${BACKEND_URL}/scan?mode=${mode}`);
+  if (!resp.ok) throw new Error(`Backend error: ${resp.status}`);
+  const data = await resp.json();
+  for (const h of data.hosts) {
+    const suffix = parseInt(h.ip.split('.').pop());
+    hosts[suffix] = {
+      http: h.http,
+      ssh: h.ssh,
+      hostname: h.hostname,
+      mac: h.mac || null,
+      latency_http: h.latency_http,
+      latency_ssh: h.latency_ssh,
+    };
+  }
+  renderTable();
+}
+
+// ---- Browser fallback scan ----
+async function probeHostBrowser(i) {
+  const ip = `${SUBNET}.${i}`;
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), TIMEOUT);
+  const t0 = performance.now();
+  try {
+    await fetch(`http://${ip}/`, { mode: 'no-cors', signal: ctrl.signal, cache: 'no-cache' });
+    clearTimeout(t);
+    hosts[i] = { http: true, ssh: null, hostname: null, mac: null, latency_http: Math.round(performance.now() - t0), latency_ssh: null };
+  } catch {
+    clearTimeout(t);
+    hosts[i] = { http: false, ssh: null, hostname: null, mac: null, latency_http: null, latency_ssh: null };
+  }
+}
+
+async function scanBrowser(range, signal) {
+  for (let b = 0; b < range.length; b += CONCURRENCY) {
+    if (signal.aborted) return;
+    const batch = range.slice(b, b + CONCURRENCY);
+    await Promise.all(batch.map(i => probeHostBrowser(i)));
+    renderTable();
+    const scanned = Math.min(b + CONCURRENCY, range.length);
+    document.getElementById('progress-bar').style.width = (scanned / range.length * 100) + '%';
+  }
+}
+
+// ---- Orchestrate ----
+function startScan(mode) {
+  if (abortCtrl) abortCtrl.abort();
+  abortCtrl = new AbortController();
+
+  for (let i = START; i <= END; i++) {
+    hosts[i] = { http: null, ssh: null, hostname: null, mac: null, latency_http: null, latency_ssh: null };
+  }
+
+  document.getElementById('btn-full').disabled = true;
+  document.getElementById('btn-ssh').disabled = true;
+  document.getElementById('btn-stop').disabled = false;
+  document.getElementById('scan-hint').textContent = `${mode === 'ssh' ? 'SSH' : 'Full'} scan running…`;
+  document.getElementById('scan-pill').textContent = 'scanning';
+  document.getElementById('scan-pill').className = 'auto-pill scanning';
+  document.getElementById('stat-online').textContent = '—';
+  document.getElementById('stat-http').textContent = '—';
+  document.getElementById('stat-ssh').textContent = '—';
+  document.getElementById('stat-scanned').textContent = '0';
+  document.getElementById('progress-bar').style.width = '0%';
+  renderTable();
+
+  if (backendOnline) {
+    document.getElementById('scan-hint').textContent = '等待后端扫描…';
+    scanBackend(mode).then(() => {
+      document.getElementById('btn-full').disabled = false;
+      document.getElementById('btn-ssh').disabled = false;
+      document.getElementById('btn-stop').disabled = true;
+      document.getElementById('scan-hint').textContent = 'Ctrl+R full · Ctrl+S SSH';
+      if (mode === 'ssh') setFilter('ssh', document.querySelector('.filter-tab[data-filter="ssh"]'));
+      renderTable();
+    }).catch(err => {
+      document.getElementById('scan-hint').textContent = '扫描失败: ' + err.message;
+      document.getElementById('btn-full').disabled = false;
+      document.getElementById('btn-ssh').disabled = false;
+      document.getElementById('btn-stop').disabled = true;
+    });
+  } else {
+    let range = [];
+    for (let i = START; i <= END; i++) range.push(i);
+    scanBrowser(range, abortCtrl.signal).then(() => {
+      document.getElementById('btn-full').disabled = false;
+      document.getElementById('btn-ssh').disabled = false;
+      document.getElementById('btn-stop').disabled = true;
+      document.getElementById('scan-hint').textContent = 'Ctrl+R full · Ctrl+S SSH';
+      renderTable();
+    });
+  }
+}
+
+function stopScan() {
+  if (abortCtrl) abortCtrl.abort();
+  document.getElementById('btn-full').disabled = false;
+  document.getElementById('btn-ssh').disabled = false;
+  document.getElementById('btn-stop').disabled = true;
+  document.getElementById('scan-hint').textContent = 'Scan stopped';
+  renderTable();
+}
+
+// ---- Clock & shortcuts ----
+function tick() {
+  document.getElementById('clock').textContent =
+    new Date().toLocaleString('zh-CN', { hour12: false });
+}
+setInterval(tick, 1000); tick();
+
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 'r') { e.preventDefault(); startScan('full'); }
+  if (e.ctrlKey && e.key === 'q') { e.preventDefault(); startScan('quick'); }
+  if (e.ctrlKey && e.key === 's') { e.preventDefault(); startScan('ssh'); }
+});
+
+// ---- Init ----
+checkBackend().then(() => renderTable());
+setInterval(checkBackend, 30000); // re-check every 30s
+
+// ---- SSH Terminal ----
+let sshSessionId = null;
+let sshTargetIp = null;
+
+function openTerminal(i) {
+  const h = hosts[i];
+  if (!h.ssh) return;
+  sshTargetIp = `${SUBNET}.${i}`;
+  sshSessionId = null;
+
+  document.getElementById('ssh-title').textContent = `SSH → ${sshTargetIp} (.${i})`;
+  document.getElementById('ssh-login').style.display = 'block';
+  document.getElementById('ssh-terminal').style.display = 'none';
+  document.getElementById('ssh-error').textContent = '';
+  document.getElementById('ssh-user').value = '';
+  document.getElementById('ssh-pass').value = '';
+  document.getElementById('ssh-connect-btn').disabled = false;
+  document.getElementById('ssh-output').textContent = '';
+  document.getElementById('ssh-input').value = '';
+  document.getElementById('ssh-input').disabled = false;
+  document.getElementById('ssh-prompt').textContent = '$';
+
+  document.getElementById('ssh-modal').classList.add('show');
+  document.getElementById('ssh-overlay').classList.add('show');
+  document.getElementById('ssh-user').focus();
+}
+
+function closeTerminal() {
+  if (sshSessionId) {
+    fetch(`${BACKEND_URL}/ssh/close`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sshSessionId }),
+    }).catch(() => {});
+    sshSessionId = null;
+  }
+  document.getElementById('ssh-modal').classList.remove('show');
+  document.getElementById('ssh-overlay').classList.remove('show');
+}
+
+async function sshConnect() {
+  if (!backendOnline) {
+    document.getElementById('ssh-error').textContent = '后端未连接';
+    return;
+  }
+  if (!sshTargetIp) {
+    document.getElementById('ssh-error').textContent = '未选择目标主机';
+    return;
+  }
+  const user = document.getElementById('ssh-user').value.trim();
+  const pass = document.getElementById('ssh-pass').value;
+  if (!user) {
+    document.getElementById('ssh-error').textContent = '请输入用户名';
+    return;
+  }
+
+  document.getElementById('ssh-connect-btn').disabled = true;
+  document.getElementById('ssh-error').textContent = '连接中…';
+
+  try {
+    const resp = await fetch(`${BACKEND_URL}/ssh/open`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ host: sshTargetIp, username: user, password: pass }),
+    });
+    const data = await resp.json();
+    if (data.error) {
+      document.getElementById('ssh-error').textContent = data.error;
+      document.getElementById('ssh-connect-btn').disabled = false;
+      return;
+    }
+    sshSessionId = data.session_id;
+    const out = document.getElementById('ssh-output');
+    out.textContent = (data.output || '') + '\n';
+    out.scrollTop = out.scrollHeight;
+    document.getElementById('ssh-login').style.display = 'none';
+    document.getElementById('ssh-terminal').style.display = 'block';
+    document.getElementById('ssh-input').focus();
+  } catch (e) {
+    document.getElementById('ssh-error').textContent = '连接失败: ' + e.message;
+    document.getElementById('ssh-connect-btn').disabled = false;
+  }
+}
+
+async function sshSend() {
+  const input = document.getElementById('ssh-input');
+  const cmd = input.value;
+  if (!sshSessionId) return;
+  input.value = '';
+  input.disabled = true;
+
+  const out = document.getElementById('ssh-output');
+  out.textContent += `$ ${cmd}\n`;
+  out.scrollTop = out.scrollHeight;
+
+  try {
+    const resp = await fetch(`${BACKEND_URL}/ssh/exec?session_id=${sshSessionId}&input=${encodeURIComponent(cmd)}`);
+    const data = await resp.json();
+    if (data.output) {
+      out.textContent += data.output;
+      out.scrollTop = out.scrollHeight;
+    }
+    if (!data.alive) {
+      document.getElementById('ssh-prompt').textContent = '[closed]';
+      input.disabled = true;
+    } else {
+      input.disabled = false;
+      input.focus();
+    }
+  } catch (e) {
+    out.textContent += `\n[error: ${e.message}]\n`;
+    out.scrollTop = out.scrollHeight;
+    input.disabled = false;
+    input.focus();
+  }
+}
+
+function sshKeydown(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    sshSend();
+  } else if (e.key === 'Tab') {
+    e.preventDefault();
+    sshTabComplete();
+  }
+}
+
+async function sshTabComplete() {
+  const input = document.getElementById('ssh-input');
+  const partial = input.value;
+  if (!sshSessionId || !partial) return;
+
+  input.disabled = true;
+  try {
+    const resp = await fetch(`${BACKEND_URL}/ssh/tab?session_id=${sshSessionId}&input=${encodeURIComponent(partial)}`);
+    const data = await resp.json();
+    if (!data.alive) {
+      document.getElementById('ssh-prompt').textContent = '[closed]';
+      input.disabled = true;
+      return;
+    }
+
+    // Try to extract completion from output
+    const out = data.output || '';
+    const lines = out.replace(/\r/g, '').split('\n').filter(l => l.trim());
+    
+    // Look for the partial text in the output — it should appear with possible completions
+    // If multiple matches, shell shows list; take completion from last line
+    const lastLine = lines[lines.length - 1] || '';
+    
+    // Simple heuristic: find partial in last few lines
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const line = lines[i];
+      const idx = line.indexOf(partial);
+      if (idx !== -1) {
+        const after = line.substring(idx);
+        // If the line has more text after partial, that's the completion
+        if (after.length > partial.length) {
+          // Extract just the completion suffix (find space boundary)
+          const rest = after.substring(partial.length);
+          const spaceIdx = rest.search(/\s/);
+          const completion = spaceIdx > 0 ? rest.substring(0, spaceIdx) : rest;
+          input.value = partial + completion;
+        }
+        break;
+      }
+    }
+
+    // Show completions list if present (multiple matches)
+    if (lines.length > 2) {
+      const display = document.getElementById('ssh-output');
+      display.textContent += out + '\n';
+      display.scrollTop = display.scrollHeight;
+    }
+  } catch (e) {
+    // Tab failed silently
+  }
+  input.disabled = false;
+  input.focus();
+}
+
+// Click handler on host rows — one-click download scan per machine
+let dlFilterIP = null;
+
+async function hostRowClick(i) {
+  const ip = `${SUBNET}.${i}`;
+  const h = hosts[i];
+
+  // If we have SSH creds, try single-machine download scan
+  if (h.ssh && dlCredUser && dlCredPass) {
+    hostScanDownloads(ip);
+    return;
+  }
+
+  // If existing downloads known, just filter
+  if (dlCountByIP[ip]) {
+    filterDownloadsByIP(ip);
+    return;
+  }
+
+  // SSH terminal fallback
+  if (h.ssh) {
+    if (!dlCredUser) {
+      // No creds — scroll to downloads panel to hint user
+      document.querySelector('section:nth-of-type(3)').scrollIntoView({ behavior: 'smooth' });
+      document.getElementById('dl-ssh-user').focus();
+      document.getElementById('dl-refresh-hint').textContent = '👆 填写 SSH 凭证后点击机器即可查看下载';
+    }
+    openTerminal(i);
+  }
+}
+
+async function hostScanDownloads(ip) {
+  document.getElementById('dl-refresh-hint').textContent = `正在查询 ${ip}…`;
+  try {
+    const url = `${BACKEND_URL}/downloads/ssh-scan?host=${encodeURIComponent(ip)}&ssh_user=${encodeURIComponent(dlCredUser)}&ssh_pass=${encodeURIComponent(dlCredPass)}`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data.error) {
+      document.getElementById('dl-refresh-hint').textContent = `${ip}: ${data.error}`;
+      return;
+    }
+    // Merge into global state
+    dlAgentData[ip] = { ...data, hostname: dlAgentData[ip]?.hostname || data.hostname };
+    dlCountByIP[ip] = data.active_count || 0;
+    // Scroll to Downloads and filter
+    filterDownloadsByIP(ip);
+    updateStats();
+    updateDownloadStats({
+      agents: dlAgentData,
+      agent_count: Object.keys(dlAgentData).length,
+      online_hosts: Object.keys(dlHostLookup).length,
+      total_downloads: Object.values(dlAgentData).reduce((s, a) => s + (a.active_count || 0), 0),
+      total_speed_bps: Object.values(dlAgentData).reduce((s, a) => s + (a.total_speed_bps || 0), 0),
+    });
+  } catch (e) {
+    document.getElementById('dl-refresh-hint').textContent = `${ip}: ${e.message}`;
+  }
+}
+
+function filterDownloadsByIP(ip) {
+  dlFilterIP = ip;
+  document.querySelector('section:nth-of-type(3)').scrollIntoView({ behavior: 'smooth' });
+  renderDownloadTable({ agents: dlAgentData });
+  // Highlight the filtered machine
+  document.getElementById('dl-refresh-hint').textContent = `筛选: ${ip}  · 点击 <strong>Refresh SSH</strong> 恢复全部`;
+  // Auto-clear filter after 15s
+  clearTimeout(window._dlFilterTimer);
+  window._dlFilterTimer = setTimeout(() => {
+    dlFilterIP = null;
+    renderDownloadTable({ agents: dlAgentData });
+    updateDownloadStats({ agents: dlAgentData, agent_count: Object.keys(dlAgentData).length, online_hosts: 0, total_downloads: 0, total_speed_bps: 0 });
+  }, 15000);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Download Dashboard — connected-session model
+// ═══════════════════════════════════════════════════════════════
+
+let dlPollTimer = null;
+let dlAgentData = {};    // {ip: agent_response}
+let dlConnectedIPs = {}; // {ip: {username, session_id}}
+let dlHostLookup = {};
+let localUser = '';        // from /config, fallback username
+
+function fmtSpeed(bps) {
+  if (!bps || bps === 0) return '—';
+  if (bps >= 1048576) return (bps / 1048576).toFixed(1) + ' MB/s';
+  if (bps >= 1024) return Math.round(bps / 1024) + ' KB/s';
+  return bps + ' B/s';
+}
+
+function fmtETA(sec) {
+  if (sec == null) return '—';
+  if (sec < 60) return sec + 's';
+  if (sec < 3600) return Math.floor(sec / 60) + 'm ' + (sec % 60) + 's';
+  return Math.floor(sec / 3600) + 'h ' + Math.floor((sec % 3600) / 60) + 'm';
+}
+
+function fmtSize(bytes) {
+  if (!bytes) return '—';
+  if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(1) + ' GB';
+  if (bytes >= 1048576) return (bytes / 1048576).toFixed(0) + ' MB';
+  if (bytes >= 1024) return Math.round(bytes / 1024) + ' KB';
+  return bytes + ' B';
+}
+
+function buildDLHostLookup() {
+  dlHostLookup = {};
+  for (let i = START; i <= END; i++) {
+    const h = hosts[i];
+    if (h.http !== null || h.ssh !== null) {
+      const ip = `${SUBNET}.${i}`;
+      dlHostLookup[ip] = { ip, suffix: i, hostname: h.hostname, mac: h.mac, has_ssh: !!h.ssh, has_http: !!h.http };
+    }
+  }
+}
+
+// ── Restore connected sessions on page load ──
+
+async function restoreSessions() {
+  if (!backendOnline) return;
+  try {
+    const resp = await fetch(`${BACKEND_URL}/ssh/sessions`);
+    const data = await resp.json();
+    dlConnectedIPs = {};
+    for (const s of (data.sessions || [])) {
+      if (s.alive) {
+        dlConnectedIPs[s.host] = { username: s.username, session_id: s.session_id };
+        if (s.username) localStorage.setItem(`dl-user-${s.host}`, s.username);
+      }
+    }
+    updateHostTableConnected();
+  } catch (e) {}
+}
+
+function updateHostTableConnected() {
+  // Update host table to show connected status and DL badges
+  buildDLHostLookup();
+  renderTable();
+}
+
+// ── Click host → connect (password only) + auto-scan downloads ──
+
+let dlConnectingIP = null;
+
+function hostRowClick(i) {
+  const ip = `${SUBNET}.${i}`;
+  const h = hosts[i];
+  if (!h.ssh) return;
+
+  // If already connected, just filter downloads
+  if (dlConnectedIPs[ip]) {
+    dlFilterIP = ip;
+    refreshDownloads();
+    document.querySelector('section:nth-of-type(3)').scrollIntoView({ behavior: 'smooth' });
+    return;
+  }
+
+  // Open password-only connect dialog — per-host username
+  dlConnectingIP = ip;
+  // 1. Per-host stored username  2. Hostname hint (e.g. "yhr-ThinkPad" → "yhr")
+  // 3. Local machine username  4. Empty
+  let username = localStorage.getItem(`dl-user-${ip}`) || '';
+  if (!username && dlHostLookup[ip]?.hostname) {
+    const dash = dlHostLookup[ip].hostname.indexOf('-');
+    if (dash > 0) username = dlHostLookup[ip].hostname.substring(0, dash);
+  }
+  if (!username) username = localUser;
+  document.getElementById('ssh-title').textContent = `连接 ${ip}`;
+  document.getElementById('ssh-login').style.display = 'block';
+  document.getElementById('ssh-terminal').style.display = 'none';
+  document.getElementById('ssh-error').textContent = '';
+  document.getElementById('ssh-user').value = username;
+  document.getElementById('ssh-pass').value = '';
+  document.getElementById('ssh-connect-btn').disabled = false;
+  document.getElementById('ssh-connect-btn').textContent = '连接';
+  document.getElementById('ssh-connect-btn').onclick = dlConnect;
+  document.getElementById('ssh-modal').classList.add('show');
+  document.getElementById('ssh-overlay').classList.add('show');
+  document.getElementById('ssh-pass').focus();
+}
+
+async function dlConnect() {
+  const username = document.getElementById('ssh-user').value.trim();
+  const password = document.getElementById('ssh-pass').value;
+  const host = dlConnectingIP;
+  if (!username || !password) {
+    document.getElementById('ssh-error').textContent = '请输入用户名和密码';
+    return;
+  }
+  document.getElementById('ssh-connect-btn').disabled = true;
+  document.getElementById('ssh-error').textContent = '连接中…';
+  localStorage.setItem(`dl-user-${host}`, username);  // per-host
+
+  try {
+    const resp = await fetch(`${BACKEND_URL}/ssh/open`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ host, username, password }),
+    });
+    const data = await resp.json();
+    if (data.error) {
+      document.getElementById('ssh-error').textContent = data.error;
+      document.getElementById('ssh-connect-btn').disabled = false;
+      return;
+    }
+    // Connected — record session
+    dlConnectedIPs[host] = { username, session_id: data.session_id };
+    // Close dialog
+    document.getElementById('ssh-modal').classList.remove('show');
+    document.getElementById('ssh-overlay').classList.remove('show');
+    // Restore normal SSH connect button
+    document.getElementById('ssh-connect-btn').textContent = 'Connect';
+    document.getElementById('ssh-connect-btn').onclick = sshConnect;
+    // Refresh downloads immediately
+    updateHostTableConnected();
+    refreshDownloads();
+  } catch (e) {
+    document.getElementById('ssh-error').textContent = '连接失败: ' + e.message;
+    document.getElementById('ssh-connect-btn').disabled = false;
+  }
+}
+
+// ── Refresh downloads from /downloads/connected ──
+
+async function refreshDownloads() {
+  if (!backendOnline) {
+    document.getElementById('dl-refresh-hint').textContent = '后端未连接';
+    return;
+  }
+  document.getElementById('dl-refresh-hint').textContent = '刷新中…';
+  // Also refresh session list
+  try {
+    const sResp = await fetch(`${BACKEND_URL}/ssh/sessions`);
+    const sData = await sResp.json();
+    dlConnectedIPs = {};
+    for (const s of (sData.sessions || [])) {
+      if (s.alive) dlConnectedIPs[s.host] = { username: s.username, session_id: s.session_id };
+    }
+  } catch (e) {}
+
+  // Fetch downloads from all connected sessions
+  try {
+    const resp = await fetch(`${BACKEND_URL}/downloads/connected`);
+    const data = await resp.json();
+    dlAgentData = data.agents || {};
+    dlCountByIP = {};
+    for (const [ip, a] of Object.entries(data.agents || {})) {
+      dlCountByIP[ip] = a.active_count || 0;
+    }
+    buildDLHostLookup();
+    renderDownloadTable(data);
+    updateDownloadStats(data);
+    renderTable();  // Update host table DL badges + connected dots
+    const connected = Object.keys(dlConnectedIPs).length;
+    document.getElementById('dl-refresh-hint').textContent =
+      `${connected} 台已连接 · ${data.total_downloads || 0} 下载 · ${fmtSpeed(data.total_speed_bps || 0)}`;
+  } catch (e) {
+    document.getElementById('dl-refresh-hint').textContent = '查询失败: ' + e.message;
+  }
+}
+
+function updateDownloadStats(data) {
+  document.getElementById('stat-dl-active').textContent = data.total_downloads ?? '—';
+  document.getElementById('stat-dl-speed').textContent = fmtSpeed(data.total_speed_bps || 0);
+  document.getElementById('stat-dl-agents').textContent = Object.keys(dlConnectedIPs).length || '—';
+  document.getElementById('stat-dl-hosts').textContent = data.agent_count ?? '—';
+  document.getElementById('stat-dl-delta-active').textContent =
+    data.total_downloads ? `${data.total_downloads} 个任务` : '无';
+  document.getElementById('stat-dl-delta-speed').textContent =
+    data.total_speed_bps ? fmtSpeed(data.total_speed_bps) : '';
+  document.getElementById('stat-dl-delta-agents').textContent =
+    Object.keys(dlConnectedIPs).length ? '已连接' : '';
+  document.getElementById('stat-dl-delta-hosts').textContent =
+    data.agent_count ? `${data.agent_count} 台有下载` : '';
+}
+
+function renderDownloadTable(data) {
+  const tbody = document.getElementById('dl-tbody');
+  const agents = data.agents || {};
+  let allDownloads = [];
+  for (const [ip, agent] of Object.entries(agents)) {
+    if (dlFilterIP && ip !== dlFilterIP) continue;
+    for (const dl of (agent.downloads || [])) {
+      allDownloads.push({ ...dl, _ip: ip, _hostname: agent.hostname, _method: agent.method || '' });
+    }
+  }
+  allDownloads.sort((a, b) => (b.speed_bps || 0) - (a.speed_bps || 0));
+
+  if (!allDownloads.length) {
+    const connected = Object.keys(dlConnectedIPs).length;
+    tbody.innerHTML = connected
+      ? '<tr><td colspan="7"><div class="dl-empty">暂无下载活动</div></td></tr>'
+      : '<tr><td colspan="7"><div class="dl-empty">点击 Hosts 表中带 SSH 的机器 → 输入密码连接 → 下载自动出现</div></td></tr>';
+    return;
+  }
+
+  let rows = '';
+  for (const dl of allDownloads) {
+    const ip = dl._ip;
+    const hostname = dl._hostname || dlHostLookup[ip]?.hostname || '';
+    const pct = dl.progress_pct;
+    const pctKnown = pct != null;
+    const pctText = pctKnown ? pct.toFixed(1) + '%' : fmtSize(dl.file_size);
+    const speedCls = dl.speed_bps > 1048576 ? 'fast' : '';
+    const fillCls = pctKnown ? '' : 'unknown';
+    const fillW = pctKnown ? Math.min(100, pct) : 100;
+    const connDot = dlConnectedIPs[ip] ? ' <span style="font-size:9px;color:var(--olive);">●</span>' : '';
+
+    rows += `<tr>
+      <td>
+        <span class="dl-machine-cell">${ip}${connDot}</span>
+        ${hostname ? `<span class="dl-machine-name">${hostname}</span>` : ''}
+      </td>
+      <td><span class="dl-tool-badge">${dl.tool}</span></td>
+      <td><span class="dl-file-cell" title="${dl.output_file || ''}">${(dl.output_file || '(unknown)').split('/').pop()}</span></td>
+      <td><span class="dl-url-cell" title="${dl.url || ''}">${dl.url || '(unknown)'}</span></td>
+      <td class="dl-progress-cell">
+        <div class="dl-progress-bar"><div class="dl-progress-fill ${fillCls}" style="width:${fillW}%"></div></div>
+        <span class="dl-progress-pct">${pctText}</span>
+      </td>
+      <td><span class="dl-speed ${speedCls}">${dl.speed_display || fmtSpeed(dl.speed_bps)}</span></td>
+      <td><span class="latency">${dl.eta_display || fmtETA(dl.eta_seconds)}</span></td>
+    </tr>`;
+  }
+  tbody.innerHTML = rows;
+}
+
+// ── IP filter ──
+
+function filterDownloadsByIP(ip) {
+  dlFilterIP = ip;
+  document.querySelector('section:nth-of-type(3)').scrollIntoView({ behavior: 'smooth' });
+  renderDownloadTable({ agents: dlAgentData });
+  document.getElementById('dl-refresh-hint').textContent = `筛选: ${ip}`;
+  clearTimeout(window._dlFilterTimer);
+  window._dlFilterTimer = setTimeout(() => {
+    dlFilterIP = null;
+    renderDownloadTable({ agents: dlAgentData });
+    refreshDownloads();  // restore hint text
+  }, 15000);
+}
+
+// ── Auto-refresh ──
+
+function toggleAutoRefresh() {
+  document.getElementById('dl-auto-refresh').checked
+    ? startDLAutoRefresh()
+    : stopDLAutoRefresh();
+}
+
+function startDLAutoRefresh() {
+  stopDLAutoRefresh();
+  dlPollTimer = setInterval(refreshDownloads, 3000);
+}
+
+function stopDLAutoRefresh() {
+  if (dlPollTimer) { clearInterval(dlPollTimer); dlPollTimer = null; }
+}
+
+// ── Init ──
+checkBackend().then(() => { restoreSessions(); renderTable(); });
+setTimeout(() => { restoreSessions(); refreshDownloads(); }, 1500);
+startDLAutoRefresh();
+</script>
+</body>
+</html>
